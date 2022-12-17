@@ -1,0 +1,45 @@
+#display-image{
+    width: 350px;
+    height: 300px;
+    border: 1px solid black;
+    background-position: center;
+    background-size: cover;
+  }
+body{
+  background-color: black!important;
+  color: white !important
+}
+#newStatus{
+  margin: 10rem
+}
+ p{
+  display: block !important;
+  margin: 7rem auto !important;
+  text-align: center !important ;
+}
+input,img{
+  margin: 1rem auto !important;
+  display: block !important
+}
+.spinner-border,.spinner-grow {
+  display: block !important;
+  margin: 0 auto !important;
+}
+.highlighter{
+  border: solid 1px white;
+  z-index: 1;
+  opacity: 0.5;
+  position: absolute !important;
+}
+.predictions {
+  width: 70%;
+}
+#display-div {
+  position: absolute; 
+  left: 0; 
+  right: 0; 
+  margin-left: auto; 
+  margin-right: auto; 
+  width: 400px; 
+  transition: 0.35s ease-in-out
+}
