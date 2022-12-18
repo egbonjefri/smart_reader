@@ -5,8 +5,14 @@ const grow = document.getElementsByClassName('spinner-grow')[0];
 const displayDiv = document.getElementById('display-div');
 const displayImage = document.getElementById('display-image')
 const newStatus = document.getElementById('newStatus');
-//Generate random color for highlighter background incase multiple objects are detected
 let newArray = []
+let arrayOutput = [];
+let array1 = []          
+
+//import the movenet model
+const MODEL_PATH = 'https://tfhub.dev/google/tfjs-model/movenet/singlepose/lightning/4';
+let movenet = null;
+//Generate random color for highlighter background incase multiple objects are detected
 function colorGenerator(){
   let color = '#'
   let array1 = [0,1,2,3,4,5,6,7,8,9,'A','B','C','D','E','F'];
@@ -25,8 +31,11 @@ image_input.addEventListener("change", function() {
     grow.classList.remove('invisible');
     if(newArray.length > 0){
       const predictions = document.querySelectorAll('.predictions');
+      const positions = document.querySelectorAll('.positions');
       const highlight = document.querySelectorAll('.highlighter');
+      array1 = []
       predictions.forEach((item)=> displayDiv.removeChild(item));
+      positions.forEach((item)=> displayDiv.removeChild(item));
       highlight.forEach((item)=>  displayDiv.removeChild(item))
     }
     setTimeout(()=>{
@@ -37,7 +46,7 @@ image_input.addEventListener("change", function() {
   
 
 });
-
+//load the cocossd model
 cocoSsd.load().then(function (loadedModel){
   model = loadedModel;
   newStatus.innerText = 'Tensorflow model loaded - Version ' + tf.version.tfjs
@@ -48,7 +57,6 @@ cocoSsd.load().then(function (loadedModel){
 
 function imageDetector(image){
   model.detect(image).then(predictions=>{
-    console.log(predictions)
     if(predictions.length > 0) {
     for(let i = 0; i < predictions.length; i++){
       let color = colorGenerator();
@@ -58,8 +66,8 @@ function imageDetector(image){
       highlighter.setAttribute('class', 'highlighter');
       text.setAttribute('class', 'predictions')
       text.style = `background: ${color};`
-      highlighter.style = `left: ${25+predictions[i].bbox[0]}px;
-      top: ${15+predictions[i].bbox[1]}px;
+      highlighter.style = `left: ${predictions[i].bbox[0]}px;
+      top: ${5+predictions[i].bbox[1]}px;
       width: ${predictions[i].bbox[2]}px;
       height: ${50+predictions[i].bbox[3]}px;
       background: ${color};
@@ -68,8 +76,52 @@ function imageDetector(image){
       newArray.push(1)
       displayDiv.appendChild(text);
       displayDiv.appendChild(highlighter);
-      if(predictions[i].score > 0.5){
+      if(predictions[i].score > 0.6){
         text.innerText = predictions[i].class + ' with ' + Math.round(parseFloat(predictions[i].score)*100)+'% confidence';
+        if(predictions[i].class==='person'){
+          async function loadAndRunModel() {
+          movenet = await tf.loadGraphModel(MODEL_PATH, {fromTFHub: true});
+          let imageTensor = tf.browser.fromPixels(image);
+          let cropSize;
+          //first value is the starting y-coordinate, then x-coordinate, the 0 for red channel
+          let cropStartPoint = [parseInt(predictions[i].bbox[1]),parseInt(predictions[i].bbox[0]), 0];
+          //convert a rectangle into a square by resizing using the height or width attribute depending on which is larger.
+          if(imageTensor.shape[0] > imageTensor.shape[1]){
+             cropSize = [parseInt(predictions[i].bbox[2]), parseInt(predictions[i].bbox[2]), 3];
+             array1.push(1)
+          }
+          else{
+             cropSize = [parseInt(predictions[i].bbox[3]+50), parseInt(predictions[i].bbox[3]+50), 3];
+          }
+          croppedTensor = tf.slice(imageTensor, cropStartPoint, cropSize);
+
+          let resizedTensor = tf.image.resizeBilinear(croppedTensor, [192, 192], true).toInt();
+          let tensorOutput = movenet.predict(tf.expandDims(resizedTensor));
+          arrayOutput = await tensorOutput.array();
+
+
+
+          for(let j = 0; j < arrayOutput[0][0].length; j++){
+            if(arrayOutput[0][0][j][2] > 0.4){
+            const newDiv = document.createElement('div');
+            newDiv.setAttribute('class', 'positions');
+            if(array1.length > 0){
+              newDiv.style = `background: ${color};
+              left: ${arrayOutput[0][0][j][1]*parseInt(predictions[i].bbox[2])+parseInt(predictions[i].bbox[0])-3}px;
+              top: ${arrayOutput[0][0][j][0]*parseInt(predictions[i].bbox[2])+parseInt(predictions[i].bbox[1])+12}px;`
+              displayDiv.appendChild(newDiv);
+            }
+            else{
+            newDiv.style = `background: ${color};
+            left: ${arrayOutput[0][0][j][1]*parseInt(predictions[i].bbox[3]+50)+parseInt(predictions[i].bbox[0])-3}px;
+            top: ${arrayOutput[0][0][j][0]*parseInt(predictions[i].bbox[3]+50)+parseInt(predictions[i].bbox[1])+12}px;`
+            displayDiv.appendChild(newDiv);
+            }
+          }
+        }
+  }
+  loadAndRunModel()
+        }
   }
   else{
         text.innerText = `possibly ${predictions[i].class} with ${Math.round(parseFloat(predictions[i].score)*100)} % confidence`;
@@ -87,4 +139,8 @@ function imageDetector(image){
 
   }
   })
+}
+//clean up used ten
+if(arrayOutput.length > 0){
+  tf.tidy(loadAndRunModel)
 }

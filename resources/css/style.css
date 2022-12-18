@@ -1,6 +1,5 @@
 #display-image{
-    width: 350px;
-    height: 300px;
+    max-width: 100%;
     border: 1px solid black;
     background-position: center;
     background-size: cover;
@@ -19,7 +18,8 @@ body{
 }
 input,img{
   margin: 1rem auto !important;
-  display: block !important
+  display: block !important;
+
 }
 .spinner-border,.spinner-grow {
   display: block !important;
@@ -33,6 +33,13 @@ input,img{
 }
 .predictions {
   width: 70%;
+}
+.positions{
+  height: 9px;
+  width: 9px;
+  position: absolute !important;
+  border-radius: 50%;
+  z-index: 10;
 }
 #display-div {
   position: absolute; 
